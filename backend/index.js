@@ -7,11 +7,20 @@ import boardRouter from "./routes/board.route.js";
 import connectDB from "./utils/connectDB.js";
 import cookieParser from "cookie-parser";
 import fileUpload from "express-fileupload";
-
+import dotenv from "dotenv";
+dotenv.config();
 const app = express();
 
 app.use(express.json());
-app.use(cors({ origin: process.env.CLIENT_URL, credentials: true }));
+// CORS: explicitly allow the Vite dev origin and credentials + common headers/methods
+app.use(
+	cors({
+		origin: process.env.CLIENT_URL,
+		credentials: true,
+		methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+		allowedHeaders: ["Content-Type", "Authorization"],
+	})
+);
 app.use(cookieParser());
 app.use(fileUpload());
 
@@ -21,16 +30,16 @@ app.use("/comments", commentRouter);
 app.use("/boards", boardRouter);
 
 app.use((error, req, res, next) => {
-  res.status(error.status || 500);
+	res.status(error.status || 500);
 
-  res.json({
-    message: error.message || "Something went wrong!",
-    status: error.status,
-    stack: error.stack,
-  });
+	res.json({
+		message: error.message || "Something went wrong!",
+		status: error.status,
+		stack: error.stack,
+	});
 });
 
 app.listen(3000, () => {
-  connectDB();
-  console.log("Server is running!");
+	connectDB();
+	console.log("Server is running!");
 });

@@ -1,106 +1,53 @@
 import GalleryItem from "../galleryItem/galleryItem";
 import "./gallery.css";
+import { useInfiniteQuery } from "@tanstack/react-query";
+import InfiniteScroll from "react-infinite-scroll-component";
+import axios from "axios";
+import Skeleton from "../skeleton/skeleton";
 
-const items = [
-	{
-		id: 1,
-		media: "/pins/pin1.jpeg",
-		width: 1260,
-		height: 1000,
-	},
-	{
-		id: 2,
-		media: "/pins/pin2.jpeg",
-		width: 1260,
-		height: 1400,
-	},
-	{
-		id: 3,
-		media: "/pins/pin3.jpeg",
-		width: 1260,
-		height: 1400,
-	},
-	{
-		id: 4,
-		media: "/pins/pin4.jpeg",
-		width: 1260,
-		height: 1000,
-	},
-	{
-		id: 5,
-		media: "/pins/pin5.jpeg",
-		width: 1260,
-		height: 1000,
-	},
-	{
-		id: 6,
-		media: "/pins/pin6.jpeg",
-		width: 1260,
-		height: 1400,
-	},
-	{
-		id: 7,
-		media: "/pins/pin7.jpeg",
-		width: 1260,
-		height: 1300,
-	},
-	{
-		id: 8,
-		media: "/pins/pin8.jpeg",
-		width: 1260,
-		height: 1000,
-	},
-	{
-		id: 9,
-		media: "/pins/pin9.jpeg",
-		width: 1260,
-		height: 1000,
-	},
-	{
-		id: 10,
-		media: "/pins/pin10.jpeg",
-		width: 1260,
-		height: 1800,
-	},
-	{
-		id: 11,
-		media: "/pins/pin11.jpeg",
-		width: 1260,
-		height: 1000,
-	},
-	{
-		id: 12,
-		media: "/pins/pin12.jpeg",
-		width: 1260,
-		height: 1000,
-	},
-	{
-		id: 13,
-		media: "/pins/pin13.jpeg",
-		width: 1260,
-		height: 1900,
-	},
-	{
-		id: 14,
-		media: "/pins/pin14.jpeg",
-		width: 1260,
-		height: 1000,
-	},
-	{
-		id: 15,
-		media: "/pins/pin15.jpeg",
-		width: 1260,
-		height: 1000,
-	},
-];
+const fetchPins = async ({ pageParam, search, userId, boardId }) => {
+	const res = await axios.get(
+		`${import.meta.env.VITE_API_ENDPOINT}/pins?cursor=${pageParam}&search=${
+			search || ""
+		}&userId=${userId || ""}&boardId=${boardId || ""}`
+	);
+	return res.data;
+};
 
-const Gallery = () => {
+const Gallery = ({ search, userId, boardId }) => {
+	const { data, fetchNextPage, hasNextPage, status } = useInfiniteQuery({
+		// queryKey: ["pins"],
+		// FIXED QUERY KEY
+		queryKey: ["pins", search, userId, boardId],
+		queryFn: ({ pageParam = 0 }) =>
+			fetchPins({ pageParam, search, userId, boardId }),
+		initialPageParam: 0,
+		getNextPageParam: (lastPage, pages) => lastPage.nextCursor,
+	});
+
+	// FIXED: ADD SKELETON LOADING
+	// if (status === "pending") return "Loading...";
+	if (status === "pending") return <Skeleton />;
+	if (status === "error") return "Something went wrong...";
+
+	const allPins = (data?.pages || []).flatMap((page) => page?.pins || []);
+	const safePins = allPins.filter((p) => p && (p._id || p.id));
+
 	return (
-		<div className="gallery">
-			{items.map((item) => (
-				<GalleryItem key={item.id} item={item} />
-			))}
-		</div>
+		<InfiniteScroll
+			dataLength={safePins.length}
+			next={fetchNextPage}
+			hasMore={!!hasNextPage}
+			loader={<h4>Loading more pins</h4>}
+			endMessage={<h3>All Posts Loaded!</h3>}
+		>
+			<div className="gallery">
+				{safePins.map((item) => (
+					<GalleryItem key={item._id ?? item.id} item={item} />
+				))}
+			</div>
+		</InfiniteScroll>
 	);
 };
+
 export default Gallery;
